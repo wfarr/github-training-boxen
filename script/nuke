@@ -1,0 +1,63 @@
+#!/usr/bin/ruby
+
+require "optparse"
+
+unless ENV["USER"] == "root"
+  exec "sudo", $0, *ARGV
+end
+
+all      = false
+force    = false
+opt      = false
+services = false
+
+OptionParser.new do |o|
+  o.banner = "Remove most traces of Boxen from your machine."
+
+  o.on("--all",       "Remove everything possible.")                         { all       = true }
+  o.on("--force",     "Actually do it.")                                     { force     = true }
+  o.on("--help",      "Show this help.")                                     { abort o.to_s    }
+  o.on("--opt",       "Remove /opt/boxen.")                                  { opt       = true }
+  o.on("--services",  "Remove and unload services.")                         { services  = true }
+  o.on("--receipts",  "Remove package receipts used by Puppet.")             { receipts  = true }
+  o.on("--gitconfig", "Remove Boxen-provided git credential helper config.") { gitconfig = true }
+
+  o.parse!
+
+  abort o.to_s unless all || opt || services
+end
+
+unless force
+  warn "** I won't actually do anything unless you pass --force."
+end
+
+if all || services
+  boxen_services = []
+  boxen_services << Dir["/Library/Launch*/dev.*.plist"]
+
+  boxen_services.flatten.each do |plist|
+    warn "-> Removing #{plist}."
+
+    if force
+      system "launchctl", "unload", "-w", plist
+      system "rm", "-f", plist
+    end
+  end
+
+  system "rm", "-f", "/etc/resolver/dev"
+end
+
+if all || opt
+  warn "-> Removing /opt/boxen."
+  system "rm", "-rf", "/opt/boxen" if force
+end
+
+if all || receipts
+  warn "-> Removing /var/db/.puppet_*."
+  system "rm", "-rf", "/var/db/.puppet_*" if force
+end
+
+if all || gitconfig
+  warn "-> Removing git credential helper config."
+  system "/usr/bin/git", "config", "--global", "--unset", "credential.helper"
+end

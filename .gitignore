@@ -1,0 +1,12 @@
+/.bundle
+/.librarian
+/.ruby-version
+/.snapshot
+/.tmp
+/bin
+/config/local.rb
+/log
+/tmp
+/shared/*
+!/shared/README.md
+/vendor/gems/
